@@ -1,0 +1,29 @@
+FROM debian:bookworm-slim
+
+ARG LUA_LANGUAGE_SERVER_VERSION=3.19.1
+ARG TARGETARCH
+
+# lua runs the suites to count the cases luaunit skips; lua-language-server does the rest.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends lua5.4 ca-certificates curl \
+  && case "${TARGETARCH:-$(dpkg --print-architecture)}" in \
+       amd64) arch=x64 ;; \
+       arm64) arch=arm64 ;; \
+       *) echo "No lua-language-server build for ${TARGETARCH}" >&2; exit 1 ;; \
+     esac \
+  && mkdir -p /opt/lua-language-server \
+  && curl -fsSL "https://github.com/LuaLS/lua-language-server/releases/download/${LUA_LANGUAGE_SERVER_VERSION}/lua-language-server-${LUA_LANGUAGE_SERVER_VERSION}-linux-${arch}.tar.gz" \
+     | tar -xz -C /opt/lua-language-server \
+  && apt-get purge -y curl \
+  && apt-get autoremove -y \
+  && rm -rf /var/lib/apt/lists/* \
+  && ln -s /usr/bin/lua5.4 /usr/local/bin/lua
+
+# lua-language-server writes its generated meta files next to itself unless told otherwise, and
+# the container does not run as root. Point it at a cache it can write to.
+RUN printf '%s\n' \
+    '#!/bin/sh' \
+    'cache="${XDG_CACHE_HOME:-${HOME:-/tmp}/.cache}/lua-language-server"' \
+    'exec /opt/lua-language-server/bin/lua-language-server --logpath "$cache/log" --metapath "$cache/meta" "$@"' \
+    > /usr/local/bin/lua-language-server \
+  && chmod +x /usr/local/bin/lua-language-server

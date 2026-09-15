@@ -1,0 +1,68 @@
+# Every script runs in its own container, against the repo mounted read-only at /repo.
+#
+#   git submodule update --init                     # once; the tests need deps/rollfor
+#   docker compose run --rm test [listen]
+#   docker compose run --rm check
+#   BUNDLE_DIR=<dir> docker compose run --rm bundle     # writes <dir>/RollForAutoRobin.zip
+#   ADDONS_DIR=<dir> docker compose run --rm install    # mirrors the addon into <dir>
+#
+# The containers run as HOST_UID:HOST_GID (default 1000:1000), so the zip and the installed
+# addons belong to you rather than root.
+
+name: rollfor-auto-robin
+
+x-script: &script
+  user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+  working_dir: /repo
+  environment:
+    HOME: /tmp
+  init: true
+
+services:
+  test:
+    <<: *script
+    build:
+      context: docker
+      dockerfile: Dockerfile-test
+    volumes:
+      - .:/repo:ro
+    entrypoint: [ "scripts/test.sh" ]
+
+  check:
+    <<: *script
+    build:
+      context: docker
+      dockerfile: Dockerfile-check
+    volumes:
+      - .:/repo:ro
+    entrypoint: [ "scripts/check.sh" ]
+
+  # The output directory has to exist: create_host_path is off so a typo fails instead of
+  # leaving a root-owned directory behind.
+  bundle:
+    <<: *script
+    build:
+      context: docker
+      dockerfile: Dockerfile-bundle
+    volumes:
+      - .:/repo:ro
+      - type: bind
+        source: "${BUNDLE_DIR:-/BUNDLE_DIR-is-not-set}"
+        target: /out
+        bind:
+          create_host_path: false
+    entrypoint: [ "scripts/bundle.sh", "/out" ]
+
+  install:
+    <<: *script
+    build:
+      context: docker
+      dockerfile: Dockerfile-install
+    volumes:
+      - .:/repo:ro
+      - type: bind
+        source: "${ADDONS_DIR:-/ADDONS_DIR-is-not-set}"
+        target: /addons
+        bind:
+          create_host_path: false
+    entrypoint: [ "scripts/install.sh", "/addons" ]

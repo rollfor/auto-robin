@@ -1,0 +1,7 @@
+FROM debian:bookworm-slim
+
+# inotify-tools is for `scripts/test.sh listen`.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends lua5.4 inotify-tools \
+  && rm -rf /var/lib/apt/lists/* \
+  && ln -s /usr/bin/lua5.4 /usr/local/bin/lua

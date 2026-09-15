@@ -1,0 +1,21 @@
+## Interface: 20506
+## Title: RollFor - Auto Round Robin
+## Author: Obszczymucha
+## Version: 1.0.0
+## Notes: Hands selected items out in a rotation instead of rolling for them.
+## Dependencies: RollFor
+## Group: RollFor
+## IconTexture: Interface\AddOns\RollFor\assets\icon-white
+## X-RollFor-Extension: auto_robin
+
+src\AutoRoundRobinDb.lua
+src\AutoRoundRobin.lua
+src\AutoRoundRobinQueueFrameContentTransformer.lua
+src\AutoRoundRobinAddPlayerFrame.lua
+src\AutoRoundRobinQueueFrame.lua
+src\AutoRoundRobinFrame.lua
+src\AutoRoundRobinSimulator.lua
+src\RoundRobinWidgets.lua
+src\OptionsPage.lua
+
+RollForAutoRobin.lua
