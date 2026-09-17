@@ -291,7 +291,8 @@ local function mock_context( overrides )
   local state = { enabled = true, set_to = nil, settings = {
     auto_round_robin = true,
     auto_round_robin_announce = true,
-    auto_round_robin_announce_drops = false
+    auto_round_robin_announce_drops = false,
+    auto_round_robin_new_group_reset = true
   } }
 
   local config = {}
@@ -446,7 +447,7 @@ OptionsPageSpec = {}
 function OptionsPageSpec:should_show_a_summary_then_the_general_tab()
   local page = shown_page( mock_context() )
 
-  eq( line_types( page ), { "section_header", "paragraph", "tabs", "checkbox", "checkbox", "checkbox" } )
+  eq( line_types( page ), { "section_header", "paragraph", "tabs", "checkbox", "checkbox", "checkbox", "checkbox" } )
 end
 
 -- This addon's own copy, not something core handed over. Matched on what the rotation
@@ -503,7 +504,7 @@ function TabsSpec:should_switch_back_to_the_general_tab()
   select_tab( page, "Loot" )
   select_tab( page, "General" )
 
-  eq( line_types( page ), { "section_header", "paragraph", "tabs", "checkbox", "checkbox", "checkbox" } )
+  eq( line_types( page ), { "section_header", "paragraph", "tabs", "checkbox", "checkbox", "checkbox", "checkbox" } )
   eq( checkbox( page, "Auto round robin" ).checked, true )
 end
 
@@ -925,17 +926,44 @@ function QueuesTabSpec:should_show_hearts_on_the_left_and_marks_on_the_right()
 end
 
 -- Each queue in the middle of its half, so the two sit the same distance from the line between
--- them, and from the panel's edges.
+-- them, and -- give or take the odd pixel the panel's width leaves over -- from the panel's edges.
 function QueuesTabSpec:should_centre_each_queue_in_its_half()
   local page = queues_page( { Hearts = { "Ann" }, Marks = { "Bob" } } )
   local left, right = column( page, "Hearts" ).frame, column( page, "Marks" ).frame
-  local middle = page.get_separator().anchor.x
+  local separator_x = page.get_separator().anchor.x
 
   eq( left.width, QUEUE_WIDTH )
   eq( right.width, QUEUE_WIDTH )
-  eq( left.anchor.x, 12 + (PANEL_HALF - QUEUE_WIDTH) / 2 )
-  eq( middle - (left.anchor.x + QUEUE_WIDTH), right.anchor.x - middle )
-  eq( left.anchor.x - 12, (12 + PANEL_HALF * 2) - (right.anchor.x + QUEUE_WIDTH) )
+  eq( separator_x - (left.anchor.x + QUEUE_WIDTH), right.anchor.x - (separator_x + 1) )
+
+  local left_edge = left.anchor.x - 12
+  local right_edge = (12 + PANEL_HALF * 2) - (right.anchor.x + QUEUE_WIDTH)
+  eq( math.abs( left_edge - right_edge ) <= 1, true )
+end
+
+-- On whole pixels, both queues and the separator_x. A queue on a fraction of one takes its thin scrollbar
+-- with it, and the client draws the two bars a different width when they start partway into a
+-- pixel by different amounts.
+function QueuesTabSpec:should_put_the_queues_and_the_line_on_whole_pixels()
+  for _, canvas_width in ipairs( { 665, 666, 667, 668 } ) do
+    local ctx = mock_context()
+    local canvas = u.modules().api.CreateFrame( "Frame" )
+    canvas.GetWidth = function() return canvas_width end
+
+    local rotation = fake_round_robin( { Hearts = { "Ann" }, Marks = { "Bob" } } )
+    local page = OptionsPage.new( ctx, canvas, { round_robin = function() return rotation end } )
+    page.show()
+    select_tab( page, "Hearts/Marks" )
+
+    local left, right = column( page, "Hearts" ).frame, column( page, "Marks" ).frame
+    local separator_x = page.get_separator().anchor.x
+
+    for _, x in ipairs( { left.anchor.x, right.anchor.x, separator_x } ) do
+      eq( x, math.floor( x ), string.format( "canvas %d", canvas_width ) )
+    end
+
+    eq( separator_x - (left.anchor.x + QUEUE_WIDTH), right.anchor.x - (separator_x + 1), string.format( "canvas %d", canvas_width ) )
+  end
 end
 
 -- Down the middle of the panel, as tall as the queues beside it.
@@ -945,8 +973,8 @@ function QueuesTabSpec:should_draw_a_line_between_the_two_queues()
 
   eq( separator.visible, true )
   eq( separator.anchor.relative_frame, page.get_panel() )
-  eq( separator.anchor.point, "TOP" )
-  eq( separator.anchor.x, 12 + PANEL_HALF )
+  eq( separator.anchor.point, "TOPLEFT" )
+  eq( separator.anchor.x, 12 + math.floor( PANEL_HALF ) )
   eq( separator.anchor.y, -12 )
   eq( separator.width, 1 )
   eq( separator.height, QUEUE_HEIGHT - 11 )
@@ -1237,7 +1265,7 @@ PanelSpec = {}
 function PanelSpec:should_put_the_tab_contents_in_the_bordered_panel()
   local page = shown_page( mock_context() )
 
-  eq( #page.get_panel().lines, 3 )
+  eq( #page.get_panel().lines, 4 )
   eq( page.get_panel().backdrop.edgeFile, "Interface\\Tooltips\\UI-Tooltip-Border" )
 end
 
@@ -1264,7 +1292,7 @@ end
 function PanelSpec:should_fit_its_lines()
   local page = shown_page( mock_context() )
 
-  eq( page.get_panel().height, 12 + 20 + 5 + 20 + 5 + 20 + 12 )
+  eq( page.get_panel().height, 12 + 20 + 5 + 20 + 5 + 20 + 5 + 20 + 12 )
 
   select_tab( page, "Loot" )
   local count = #rows( page )
@@ -1319,6 +1347,16 @@ function SettingsSpec:should_draw_its_own_settings_from_the_config()
   eq( checkbox( page, "Auto round robin" ).checked, true )
   eq( checkbox( page, "Announce awards" ).checked, true )
   eq( checkbox( page, "Announce drops the rotation will hand out" ).checked, false )
+  eq( checkbox( page, "Remove non-core players from queues on new group" ).checked, true )
+end
+
+function SettingsSpec:should_turn_off_removing_non_core_players_from_its_checkbox()
+  local ctx = mock_context()
+  local page = shown_page( ctx )
+
+  checkbox( page, "Remove non-core players from queues on new group" ).on_click( false )
+
+  eq( ctx.state.settings.auto_round_robin_new_group_reset, false )
 end
 
 function SettingsSpec:should_write_a_setting_back_when_its_checkbox_is_clicked()

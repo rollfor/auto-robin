@@ -18,6 +18,7 @@ local AutoRoundRobinAddPlayerFrame = require( "src/AutoRoundRobinAddPlayerFrame"
 ---@field labels fun(): string[]
 ---@field field fun( label: string ): table?
 ---@field class_options fun(): string[]
+---@field name_is_focused fun(): boolean
 
 ---@param popup_builder { new: fun(): PopupBuilder }
 ---@param round_robin AutoRoundRobin
@@ -55,7 +56,8 @@ function M.new( popup_builder, round_robin, group_roster, on_added )
         SetScript = function() end,
         ClearAllPoints = function() end,
         SetPoint = function() end,
-        SetFrameLevel = function() end
+        SetFrameLevel = function() end,
+        SetFocus = function() end
       }
 
       local line = { type = line_type, frame = frame }
@@ -64,6 +66,7 @@ function M.new( popup_builder, round_robin, group_roster, on_added )
       frame.SetText = function( _, text ) line.text = text end
       frame.SetValue = function( _, value ) line.value = value end
       frame.SetOptions = function( _, options ) line.options = options end
+      frame.SetFocus = function() line.focused = true end
       frame.SetScript = function( _, script, handler )
         if script == "OnClick" then line.on_click = handler end
       end
@@ -110,6 +113,11 @@ function M.new( popup_builder, round_robin, group_roster, on_added )
 
   frame.press_enter = function()
     field( "Name" ).frame.on_enter()
+  end
+
+  frame.name_is_focused = function()
+    local name = field( "Name" )
+    return name and name.focused or false
   end
 
   frame.class_options = function()

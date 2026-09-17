@@ -19,6 +19,10 @@ local ar = RollForAutoRobin
 -- API 8 is ctx.open_options, which is how /rf autorobin brings the Loot tab up now that the list
 -- is no longer a window of its own.
 --
+-- API 9 is ctx.on_new_group. The rotation always knew how to let go of the last group -- core
+-- told it when a new one formed while it lived there -- but nothing could tell an extension, so
+-- the queues kept every group they had ever seen.
+--
 -- The registration below runs at file scope: the TOC declares `## Dependencies: RollFor`,
 -- which makes the client load RollFor first and refuse to load this addon without it.
 
@@ -72,6 +76,12 @@ local function on_enable( ctx )
     { cmd = "auto-robin-announce", display = "Announce auto round robin awards",
       help = "toggle announcing auto round robin awards" }, true )
 
+  -- On by default: a player the queues picked up from the last group has no claim on the next
+  -- one. Core players stay either way -- that is what core means (see AutoRoundRobin).
+  ctx.config.register_toggle( "auto_round_robin_new_group_reset",
+    { cmd = "auto-robin-new-group-reset", display = "Remove non-core players from queues on new group",
+      help = "toggle removing non-core players from the queues when a new group forms" }, true )
+
   -- This addon's row widgets, into the table FrameBuilder resolves rows against. Here rather
   -- than in on_ready because the windows built there look their rows up by name as they draw.
   ar.RoundRobinWidgets.register( ctx.gui_elements )
@@ -113,6 +123,17 @@ local function on_enable( ctx )
     -- The queues are read fresh on every draw, so redrawing is all it takes for someone who joined
     -- to appear.
     refresh_options_page()
+  end )
+
+  -- Core calls this after the group-changed hooks for the same roster update, so the rebuild
+  -- starts from the group as it is now. It updates every queue, and every queue update redraws an
+  -- open options page (see on_ready) -- even one that had nobody to remove -- while a closed page
+  -- reads the queues when it next shows.
+  ctx.on_new_group( function()
+    if not ar.auto_round_robin then return end
+    if not ctx.config.auto_round_robin_new_group_reset() then return end
+
+    ar.auto_round_robin.on_new_group()
   end )
 end
 
@@ -235,7 +256,7 @@ function M.register()
   return RollFor.Extensions.register( {
     name = "auto_robin",
     title = "Auto Round Robin",
-    api_version = 8,
+    api_version = 9,
     default_enabled = true,
 
     -- This addon is the feature, and "Auto round robin" already says whether it does anything.

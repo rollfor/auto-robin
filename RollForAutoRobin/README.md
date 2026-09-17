@@ -28,6 +28,7 @@ On the **General** tab of this addon's page in RollFor's options window, and in 
 | Auto round robin | on |
 | Announce awards | on |
 | Announce drops the rotation will hand out | off |
+| Remove non-core players from queues on new group | on |
 
 When RollForAutoLoot could hand out the same item, whichever is higher in **Loot priority**
 in RollFor's options window gets it. Auto-loot starts on top.

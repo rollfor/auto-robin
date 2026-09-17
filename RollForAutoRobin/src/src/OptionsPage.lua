@@ -192,7 +192,8 @@ local button_defaults = {
 local TOGGLES = {
   { key = "auto_round_robin", label = "Auto round robin" },
   { key = "auto_round_robin_announce", label = "Announce awards" },
-  { key = "auto_round_robin_announce_drops", label = "Announce drops the rotation will hand out" }
+  { key = "auto_round_robin_announce_drops", label = "Announce drops the rotation will hand out" },
+  { key = "auto_round_robin_new_group_reset", label = "Remove non-core players from queues on new group" }
 }
 
 -- The queue tabs, and the two queues each shows, left then right. The names are the catalogue's
@@ -613,7 +614,7 @@ function M.new( ctx, parent, deps )
   local separator
   local separator_drawn = false
 
-  ---@param x number -- from the panel's left edge
+  ---@param x number -- where the line's left edge sits, from the panel's left edge
   ---@param height number
   local function draw_separator( x, height )
     if not separator then
@@ -623,7 +624,8 @@ function M.new( ctx, parent, deps )
     end
 
     separator:ClearAllPoints()
-    separator:SetPoint( "TOP", panel, "TOPLEFT", x, -PANEL_INSET )
+    -- By its left edge, not its middle: a 1 wide line centred on a whole pixel straddles two.
+    separator:SetPoint( "TOPLEFT", panel, "TOPLEFT", x, -PANEL_INSET )
     separator:SetWidth( SEPARATOR_WIDTH )
     separator:SetHeight( height )
     separator:Show()
@@ -785,22 +787,28 @@ function M.new( ctx, parent, deps )
 
       -- Half the inside of the panel each, split by the separator, with each queue in the middle of
       -- its half: the two sit the same distance from the line, and from the panel's edges.
+      --
+      -- Worked out in whole pixels, everything from the line outwards. Halving the panel's width
+      -- lands a queue on a fraction of a pixel, and the queue's thin scrollbar with it; the client
+      -- draws a texture that starts partway into a pixel across every pixel it touches, so each
+      -- side rounded its bar differently and one looked wider than the other.
       local width = panel_width() or 0
-      local half = math.max( (width - PANEL_INSET * 2) / 2, QUEUE_WIDTH )
-      local margin = (half - QUEUE_WIDTH) / 2
+      local half = math.max( math.floor( (width - PANEL_INSET * 2) / 2 ), QUEUE_WIDTH )
+      local gap = math.floor( (half - QUEUE_WIDTH) / 2 )
+      local line = PANEL_INSET + half
+      local lefts = { line - gap - QUEUE_WIDTH, line + SEPARATOR_WIDTH + gap }
       local height = 0
 
       for index, category in ipairs( queue_tab.categories ) do
         if known[ category ] then
-          local x = PANEL_INSET + (index - 1) * half + margin
-          height = math.max( height, add_queue_column( content, index, category, x ) )
+          height = math.max( height, add_queue_column( content, index, category, lefts[ index ] ) )
         end
       end
 
       if height == 0 then return 0 end
 
       local content_height = height - QUEUE_PANEL_TRIM
-      draw_separator( PANEL_INSET + half, content_height )
+      draw_separator( line, content_height )
 
       return content_height
     end

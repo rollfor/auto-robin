@@ -74,6 +74,10 @@ function M.new( popup_builder, round_robin, group_roster, on_added )
   local class = m.Types.PlayerClass.Warrior
   local error_message
 
+  -- The name box as last drawn, which is what gets the keyboard when the form opens: every redraw
+  -- builds the lines again, so the one from before may not be the one on screen.
+  local name_field
+
   -- Forward declared: the fields call it to redraw the error line and the class the roster
   -- guessed, and the buttons call it after a failed add.
   local refresh
@@ -162,6 +166,7 @@ function M.new( popup_builder, round_robin, group_roster, on_added )
           frame:SetScript( "OnClick", v.on_click or function() end )
           frame:SetFrameLevel( popup:GetFrameLevel() + 1 )
         elseif type == "text_field" then
+          name_field = frame
           frame:SetText( v.label or "" )
           frame:SetFieldWidth( v.width )
           frame:SetMaxLetters( v.max_letters )
@@ -211,6 +216,10 @@ function M.new( popup_builder, round_robin, group_roster, on_added )
 
     refresh()
     popup:Show()
+
+    -- Straight into the name, since typing one is the only reason to open the form. After Show,
+    -- because a hidden box can't take the keyboard.
+    if name_field then name_field:SetFocus() end
   end
 
   ---@type AutoRoundRobinAddPlayerFrame

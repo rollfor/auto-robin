@@ -191,6 +191,27 @@ function AddPlayerFrameSpec:should_clear_the_name_and_the_error_when_reopened()
   eq( frame.labels(), { title( "Gems" ), "Name", "Class", "Add", "Cancel" } )
 end
 
+-- Typing a name is the only reason to open the form, so the keyboard is already there.
+function AddPlayerFrameSpec:should_focus_the_name_when_opened()
+  local frame = new_frame()
+
+  frame.show( "Gems" )
+
+  eq( frame.name_is_focused(), true )
+end
+
+-- Every opening draws the form again, so it is the name box on screen that gets focused, not the
+-- one from last time.
+function AddPlayerFrameSpec:should_focus_the_name_again_when_reopened()
+  local frame = new_frame()
+
+  frame.show( "Gems" )
+  frame.hide()
+  frame.show( "Marks" )
+
+  eq( frame.name_is_focused(), true )
+end
+
 function AddPlayerFrameSpec:should_close_on_cancel_without_adding()
   local frame = new_frame()
   frame.show( "Gems" )

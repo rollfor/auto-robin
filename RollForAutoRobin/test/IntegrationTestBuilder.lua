@@ -493,7 +493,8 @@ function M.new_roll_for()
         award_policy = award_policies.register,
         loot_claim = award_policies.claim_of,
         on_dropped_item = function( predicate ) table.insert( withhold, predicate ) end,
-        on_group_changed = function() end
+        on_group_changed = function() end,
+        on_new_group = function() end
       } )
     end
 

@@ -27,7 +27,7 @@ local auto_robin = RollForAutoRobin.main
 ---@return table -- what on_enable was given, with everything it wrote to
 local function enable_into()
   local registered = { toggles = {}, numbers = {}, predicates = {}, rf_commands = {},
-    gui_elements = {}, policies = {} }
+    gui_elements = {}, policies = {}, new_group = {}, new_group_reset = true }
 
   auto_robin.on_enable( {
     config = {
@@ -35,12 +35,14 @@ local function enable_into()
       register_number = function( key, default, min, max )
         registered.numbers[ key ] = { default = default, min = min, max = max }
       end,
-      auto_round_robin_announce_drops = function() return false end
+      auto_round_robin_announce_drops = function() return false end,
+      auto_round_robin_new_group_reset = function() return registered.new_group_reset end
     },
     gui_elements = registered.gui_elements,
     award_policy = function( spec ) table.insert( registered.policies, spec ) end,
     on_dropped_item = function( predicate ) table.insert( registered.predicates, predicate ) end,
     on_group_changed = function() end,
+    on_new_group = function( callback ) table.insert( registered.new_group, callback ) end,
     on_rf_command = function( name, callback ) registered.rf_commands[ name ] = callback end
   } )
 
@@ -114,14 +116,15 @@ function RegistrationSpec:should_ask_core_not_to_draw_an_enabled_switch()
   eq( Extensions.is_enabled( "auto_robin" ), true )
 end
 
--- The selection tree arrived on ctx with API 5, award_policy with API 6, and open_options with
--- API 8. Asking for a version the host does not have is what marks an extension incompatible.
+-- The selection tree arrived on ctx with API 5, award_policy with API 6, open_options with API 8,
+-- and on_new_group with API 9. Asking for a version the host does not have is what marks an
+-- extension incompatible.
 function RegistrationSpec:should_declare_the_api_version_the_seams_it_uses_arrived_in()
   Extensions.clear()
   auto_robin.register()
 
   eq( Extensions.all()[ 1 ].incompatible, nil )
-  eq( Extensions.all()[ 1 ].api_version, 8 )
+  eq( Extensions.all()[ 1 ].api_version, 9 )
 end
 
 AwardPolicySpec = {}
@@ -464,6 +467,95 @@ function WidgetSpec:should_find_the_core_row_types_its_windows_borrow()
   end
 end
 
+-- A new group, as core reports it: the hook on_enable registered, run the way core runs it once
+-- on_ready has built the rotation.
+NewGroupSpec = {}
+
+-- The rotation after on_ready, with Ann core and Bob not -- the one a past group left behind.
+---@return table -- what on_enable registered
+local function ready_with_a_leftover_player()
+  local registered = enable_into()
+  auto_robin.on_ready( ready_context( { rf_commands = {}, opened = {} } ) )
+
+  local rotation = RollForAutoRobin.auto_round_robin
+  rotation.add_player( "Gems", "Ann", "Warrior" )
+  rotation.add_player( "Gems", "Bob", "Warrior" )
+  rotation.set_core( "Gems", 2, false )
+
+  return registered
+end
+
+---@return string[]
+local function gems_queue()
+  local result = {}
+
+  for _, player in ipairs( RollForAutoRobin.auto_round_robin.get_queue( "Gems" ) ) do
+    table.insert( result, player.name )
+  end
+
+  return result
+end
+
+function NewGroupSpec:should_register_for_new_groups()
+  eq( #enable_into().new_group, 1 )
+end
+
+function NewGroupSpec:should_remove_non_core_players_from_the_queues()
+  local registered = ready_with_a_leftover_player()
+
+  registered.new_group[ 1 ]()
+
+  eq( gems_queue(), { "Ann" } )
+end
+
+-- The setting's whole point: somebody who wants the queues to carry over says so.
+function NewGroupSpec:should_leave_the_queues_alone_when_the_setting_is_off()
+  local registered = ready_with_a_leftover_player()
+  registered.new_group_reset = false
+
+  registered.new_group[ 1 ]()
+
+  eq( gems_queue(), { "Ann", "Bob" } )
+end
+
+-- An open options page shows the queues as they are after the new group, not before it.
+function NewGroupSpec:should_redraw_the_options_page()
+  local registered = ready_with_a_leftover_player()
+  local page = RollForAutoRobin.options_page
+  local refreshes = 0
+  RollForAutoRobin.options_page = { refresh = function() refreshes = refreshes + 1 end }
+
+  registered.new_group[ 1 ]()
+
+  RollForAutoRobin.options_page = page
+  eq( refreshes > 0, true )
+end
+
+-- Even with nobody to remove: the rebuild still updates every queue, and an update is what redraws.
+function NewGroupSpec:should_redraw_the_options_page_with_nobody_to_remove()
+  local registered = enable_into()
+  auto_robin.on_ready( ready_context( { rf_commands = {}, opened = {} } ) )
+  local page = RollForAutoRobin.options_page
+  local refreshes = 0
+  RollForAutoRobin.options_page = { refresh = function() refreshes = refreshes + 1 end }
+
+  registered.new_group[ 1 ]()
+
+  RollForAutoRobin.options_page = page
+  eq( refreshes > 0, true )
+end
+
+-- Core may report a group before on_ready has built anything to reset.
+function NewGroupSpec:should_do_nothing_before_the_rotation_is_built()
+  local registered = enable_into()
+  local rotation = RollForAutoRobin.auto_round_robin
+  RollForAutoRobin.auto_round_robin = nil
+
+  registered.new_group[ 1 ]()
+
+  RollForAutoRobin.auto_round_robin = rotation
+end
+
 SettingsRegistrationSpec = {}
 
 function SettingsRegistrationSpec:should_register_its_own_settings_rather_than_expecting_core_to_have_them()
@@ -474,7 +566,9 @@ function SettingsRegistrationSpec:should_register_its_own_settings_rather_than_e
     auto_round_robin_announce = true,
     -- Off: when the rotation hands an item out, the award announces it a moment later and
     -- the item was never up for grabs.
-    auto_round_robin_announce_drops = false
+    auto_round_robin_announce_drops = false,
+    -- On: a player the queues picked up from the last group has no claim on the next one.
+    auto_round_robin_new_group_reset = true
   } )
 
   -- No row limit any more: it was the queue window's height, and the queue tabs show a whole raid.

@@ -1,7 +1,7 @@
 ## Interface: 20506
 ## Title: RollFor - Auto Round Robin
 ## Author: Obszczymucha
-## Version: 1.0.2
+## Version: 1.0.3
 ## Notes: Hands selected items out in a rotation instead of rolling for them.
 ## Dependencies: RollFor
 ## Group: RollFor

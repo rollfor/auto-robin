@@ -3,7 +3,7 @@
 ## Reference
 - **RollFor** (core and the shared test harness): the submodule in `deps/rollfor`, pinned to
   a release tag of [rollfor/rollfor](https://github.com/rollfor/rollfor), currently
-  `v5.0.6-beta1`. Its `CLAUDE.md` holds the conventions this repo follows.
+  `v5.0.8-beta1`. Its `CLAUDE.md` holds the conventions this repo follows.
 - **Client UI source** (BCC, `2.5.6.68502`), the authority on what an API
   returns: `$HOME/.projects/lua/wow-ui-source.git/classic_anniversary`
 - **Other addons**: `$HOME/.projects/lua/wow-2.5.x-addons.git/master`
