@@ -14,13 +14,14 @@ another. The order shown is the order items are handed out.
 
 | Command | What it does |
 |---|---|
-| `/rf autorobin` | Which items the rotation hands out |
-| `/rf autorobin queue` | The queues |
+| `/rf autorobin` | Opens this addon's page in RollFor's options window, on the **General** tab |
+| `/rf autorobin loot` | Opens the same page on the **Loot** tab, where you tick which items the rotation hands out |
+| `/rf autorobin [hearts\|marks\|gems\|trash]` | Opens the same page on that queue's tab: **Hearts/Marks** or **Gems/Trash**. Each tab shows its two queues side by side, each with a search box |
 | `/rf autorobin reset` | Clears every queue, asking first if any have players |
 
 ## Settings
 
-On this addon's page in RollFor's options window, and in `/rf config`:
+On the **General** tab of this addon's page in RollFor's options window, and in `/rf config`:
 
 | Setting | Default |
 |---|---|

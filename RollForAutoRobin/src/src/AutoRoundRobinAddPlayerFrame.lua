@@ -63,7 +63,7 @@ end
 ---@param popup_builder PopupBuilder
 ---@param round_robin AutoRoundRobin
 ---@param group_roster GroupRoster
----@param on_added fun() -- lets the queue window redraw
+---@param on_added fun() -- lets the queue tabs redraw
 ---@return AutoRoundRobinAddPlayerFrame
 function M.new( popup_builder, round_robin, group_roster, on_added )
   local popup

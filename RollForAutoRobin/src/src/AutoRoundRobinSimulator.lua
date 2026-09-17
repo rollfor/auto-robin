@@ -16,7 +16,7 @@ local blue = m.colors.blue
 
 -- Dev harness for the round-robin queues. It runs the shipped queue operations
 -- (AutoRoundRobin.sync / next_position / serve / move / cycle -- the same functions the award
--- pass and the Queues window call) over a scratch roster, so a rotation can be watched solo,
+-- pass and the queue tabs call) over a scratch roster, so a rotation can be watched solo,
 -- without a raid, a loot window or master loot.
 --
 --   /rfrotate raid Ann,Bob,Cid  start a simulation with these players
@@ -399,7 +399,7 @@ function M.new( round_robin_db, group_roster )
 
   ---@param direction string
   local function cycle( direction )
-    -- Up moves the list up, the same way the Queues window's buttons do.
+    -- Up moves the list up, the same way the queue tabs' buttons do.
     local offset = direction == "up" and 1 or direction == "down" and -1
 
     if not offset then

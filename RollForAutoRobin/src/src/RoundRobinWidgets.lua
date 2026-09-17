@@ -167,8 +167,8 @@ function M.round_robin_row( parent )
     hover_highlight:Hide()
   end
 
-  -- Nothing emits a header row for this list any more, but ListPopup calls this on every row it
-  -- draws, so it stays -- and stays correct, in case one is ever wanted back.
+  -- Nothing emits a header row for this list any more, but the queue tabs call this on every row
+  -- it draws, so it stays -- and stays correct, in case one is ever wanted back.
   container.SetHeader = function( _, header )
     is_header = header and true or false
 
@@ -197,8 +197,9 @@ function M.round_robin_row( parent )
     hover_highlight:Hide()
   end )
 
-  -- A mouse-enabled row swallows the click the popup needs to start dragging, so the row hands
-  -- it back rather than making most of the frame undraggable.
+  -- A mouse-enabled row swallows the click a draggable parent needs to start dragging, so the row
+  -- hands it back rather than making most of the frame undraggable. The options page it is drawn
+  -- on now doesn't drag, and simply has nothing to hand it to.
   container:RegisterForDrag( "LeftButton" )
 
   local function forward_to_popup( script )
@@ -220,13 +221,12 @@ end
 -- also be counted into the list's own length.
 --
 -- Same fixed width as a row, so "aligned with the list" is exact rather than approximate -- both
--- are centred by the popup, so equal widths put their right edges in the same place.
+-- start at the same left edge, so equal widths put their right edges in the same place.
 --
 -- It costs no vertical space. The container is a sliver, and the number is drawn *above* it -- in
 -- the band the line before it already occupies, which is the category picker's. A number is two
 -- characters wide and the picker's right half is empty, so a line of its own would be 24 pixels
--- of window bought for nothing. That matters beyond tidiness here: the popup is centre-anchored,
--- so every pixel it grows moves the title and the picker up the screen.
+-- of page bought for nothing, and the queue would start that much further down the tab.
 local round_robin_count_height = 1
 local round_robin_count_lift = 5
 
@@ -323,6 +323,11 @@ function M.text_field( parent )
   return container
 end
 
+
+-- A queue row's fixed size, for laying out a column of them before any row exists: an empty queue
+-- still takes the room its rows would.
+M.ROW_WIDTH = round_robin_row_width
+M.ROW_HEIGHT = round_robin_row_height
 
 -- Written into core's table, which is what FrameBuilder resolves rows against. Called from
 -- on_enable, before anything builds a window.

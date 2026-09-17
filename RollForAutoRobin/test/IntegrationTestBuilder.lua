@@ -95,7 +95,6 @@ function M.mock_config( configuration )
       return true
     end,
     auto_round_robin_announce_drops = function() return config and config.auto_round_robin_announce_drops end,
-    round_robin_queue_rows = function() return 10 end
   }
 end
 

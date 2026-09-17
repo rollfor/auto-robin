@@ -185,7 +185,7 @@ end
 -- sends the first of them to the back and everybody else climbs a place, a negative one brings
 -- the last of them to the front.
 --
--- The bounds are what the Queues window needs. It draws only the players in the group, so
+-- The bounds are what the queue tabs need. It draws only the players in the group, so
 -- rotating the whole queue steps past an absent player about as often as not and redraws
 -- identically -- the dead button the row arrows already avoid by moving a player past their
 -- neighbour *on screen* rather than one place in the queue. Bounded by the first and last player

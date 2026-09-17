@@ -40,7 +40,7 @@ local function quality_color( quality )
 end
 
 -- The colour each category is drawn in, as plain RRGGBB -- no escape codes, so it is as usable as
--- an { r, g, b } for the tree as it is as text for the dropdown. A colour rather than a quality,
+-- an { r, g, b } for the tree as it is as text for a queue's search box. A colour rather than a quality,
 -- so a category is free to take one no item quality has; the four below borrow quality colours
 -- because that is what reads well next to the items in them, not because a category has to.
 local ids = {
@@ -82,7 +82,7 @@ local ids = {
   -- threshold cannot be handed out by GiveMasterLoot in the first place, and the award pass
   -- already rejects those before it ever asks which category serves them (see
   -- AutoRoundRobin.is_awardable). So ticking Uncommon while the threshold is Rare is inert, and
-  -- the window is what says so -- re-deriving the threshold here would only give the two places
+  -- the Loot tab is what says so -- re-deriving the threshold here would only give the two places
   -- a chance to disagree.
   [ TRASH ] = {
     color = quality_color( 0 ), -- poor
@@ -138,7 +138,7 @@ function M.colorize( category )
   return m.colorize( entry.color, category )
 end
 
--- Only ever used to name a quality in a sentence (see the window's inert-row tooltip), never to
+-- Only ever used to name a quality in a sentence (see the Loot tab's inert-row tooltip), never to
 -- decide anything.
 local quality_names = {
   [ 0 ] = "Poor",
@@ -155,15 +155,16 @@ function M.quality_name( quality )
   return quality_names[ quality ] or tostring( quality )
 end
 
--- The categories that own a queue, in catalogue order, which is the order the Queues dropdown
--- offers them.
+-- The categories that own a queue, in catalogue order, which is the order display addons are given
+-- them in (see RollForApi).
 --
 -- Every queue there is comes from this list: db.queues is written lazily, keyed by whatever name
 -- it is handed (see AutoRoundRobin), and every caller that names a queue takes the name from
--- here. So leaving Trash Ignored out is all it takes for that category never to have one.
+-- here -- the queue tabs too, which draw a queue only if it is in this list. So leaving Trash
+-- Ignored out is all it takes for that category never to have one.
 --
 -- The selection tree does not come through here -- SelectionTree.build_flat walks db.ids itself --
--- which is why the ignore list still draws in the window that ticks it.
+-- which is why the ignore list still draws on the Loot tab that ticks it.
 ---@param db table? -- the persisted autorobin_db; falls back to the static catalogue
 ---@return string[]
 function M.categories( db )
