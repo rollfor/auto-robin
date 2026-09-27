@@ -904,8 +904,8 @@ end
 -- under them and its buttons.
 local QUEUE_HEIGHT = 7 + 18 + 9 + 20 * (16 + 2) + 25 + (8 + 24 * 0.76)
 
--- A queue's frame: a 194 wide row with 20 of room either side.
-local QUEUE_WIDTH = 194 + 20 * 2
+-- A queue's frame: a 227 wide row with 20 of room either side.
+local QUEUE_WIDTH = 227 + 20 * 2
 
 -- Inside the panel's inset, split in two.
 local PANEL_HALF = (CANVAS_WIDTH - 32 + 14 - 12 * 2) / 2

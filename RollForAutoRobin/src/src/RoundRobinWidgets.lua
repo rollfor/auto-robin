@@ -41,14 +41,18 @@ local row_hover_overhang = 10
 -- the list did not. The arrows move that one player; removing is an x rather than a confirmation,
 -- because putting somebody back is one click of Add.
 --
--- The buttons are the client's own textured templates rather than text on a UIPanelButton: the
--- scroll arrows already mean "move this up/down" everywhere else in the UI, and they carry
+-- The buttons are the client's own artwork rather than text on a UIPanelButton, and they carry
 -- Pushed, Highlight and -- the one that matters here -- Disabled artwork, so an arrow at the end
 -- of the list looks unavailable instead of merely doing nothing.
 --
--- The templates are their own fixed sizes (18x16 for the arrows, 32x32 for the close button),
--- so each is scaled to sit in a 16px row rather than resized -- scaling keeps the artwork's
--- proportions, and SetWidth on a textured button stretches it.
+-- The four that move a player are the chat frame's scroll buttons: the only set in the client with
+-- a "to the end" icon (ScrollEnd, an arrow onto a bar) next to its up and down. There is no
+-- "to the top" one, so top is ScrollEnd flipped. The scrollbar arrows these used to be have no
+-- end icon at all, and mixing the two sets would read as two kinds of control.
+--
+-- The artwork is its own fixed size (32x32 for all of these), so each is scaled to sit in a 16px
+-- row rather than resized -- scaling keeps the artwork's proportions, and SetWidth on a textured
+-- button stretches it.
 local round_robin_row_height = 16
 -- The name column is a fixed 108 like every other player column in this file, because a character
 -- name is at most 12 characters and that is what 12 of them measure. It was 130, which left a
@@ -58,9 +62,9 @@ local round_robin_row_height = 16
 -- Some gap is left on purpose. The column is fixed rather than sized per name so the buttons line
 -- up in a column down the list -- an x that moved left and right as the names changed length
 -- would be much harder to hit than a few pixels of air.
--- Widened by exactly the checkbox column below, so the name column keeps the width it was sized
--- to and the right-anchored buttons ride out with the edge.
-local round_robin_row_width = 194
+-- Widened by exactly the checkbox column below, and again by the top and bottom buttons, so the
+-- name column keeps the width it was sized to and the right-anchored buttons ride out with the edge.
+local round_robin_row_width = 227
 local round_robin_checkbox_size = 14
 local round_robin_checkbox_x = 4
 local round_robin_name_x = 26
@@ -76,16 +80,43 @@ local transient_row_alpha = 0.5
 -- UIPanelCloseButton would hide its parent on click -- the row -- so the NoScripts variant is the
 -- one to hang our own handler off.
 --
--- The offsets account for each template's own scaled width (32x0.55 and 18x0.85 on screen), so
--- they clear each other by a couple of pixels rather than by whatever the arithmetic happened to
+-- Left to right that reads top, up, down, bottom, x.
+--
+-- The offsets account for each button's own scaled width (32x0.55 for the x, 32x0.5 for the rest on
+-- screen), so they clear each other by a pixel rather than by whatever the arithmetic happened to
 -- leave.
 local round_robin_buttons = {
   { field = "remove", template = "UIPanelCloseButtonNoScripts", scale = 0.55, x = 2 },
-  { field = "down", template = "UIPanelScrollDownButtonTemplate", scale = 0.85, x = -18 },
-  { field = "up", template = "UIPanelScrollUpButtonTemplate", scale = 0.85, x = -35 }
+  { field = "bottom", icon = "ScrollEnd", scale = 0.5, x = -16 },
+  { field = "down", icon = "ScrollDown", scale = 0.5, x = -33 },
+  { field = "up", icon = "ScrollUp", scale = 0.5, x = -50 },
+  { field = "top", icon = "ScrollEnd", flip = true, scale = 0.5, x = -67 }
 }
 
--- A row in the auto round robin queue: core, the player, then up / down / remove.
+-- One of the chat frame's scroll buttons, the way FloatingChatFrame.xml builds them.
+---@param parent Frame
+---@param definition table
+local function chat_icon_button( parent, definition )
+  local button = m.api.CreateFrame( "Button", nil, parent )
+  button:SetWidth( 32 )
+  button:SetHeight( 32 )
+
+  local path = "Interface\\ChatFrame\\UI-ChatIcon-" .. definition.icon
+  button:SetNormalTexture( path .. "-Up" )
+  button:SetPushedTexture( path .. "-Down" )
+  button:SetDisabledTexture( path .. "-Disabled" )
+  button:SetHighlightTexture( "Interface\\Buttons\\UI-Common-MouseHilight", "ADD" )
+
+  if definition.flip then
+    button:GetNormalTexture():SetTexCoord( 0, 1, 1, 0 )
+    button:GetPushedTexture():SetTexCoord( 0, 1, 1, 0 )
+    button:GetDisabledTexture():SetTexCoord( 0, 1, 1, 0 )
+  end
+
+  return button
+end
+
+-- A row in the auto round robin queue: core, the player, then top / up / down / bottom / remove.
 --
 -- The checkbox is core (see AutoRoundRobin), not selection and not eligibility: ticked means the
 -- player stays when the group turns over. Same template and size the auto-loot tree uses, so the
@@ -129,10 +160,11 @@ function M.round_robin_row( parent )
   local buttons = {}
 
   for _, definition in ipairs( round_robin_buttons ) do
-    local button = m.api.CreateFrame( "Button", nil, container, definition.template )
+    local button = definition.icon and chat_icon_button( container, definition )
+      or m.api.CreateFrame( "Button", nil, container, definition.template )
     button:SetScale( definition.scale )
     -- The offset is in the button's own scaled coordinates, so it is divided by the scale to keep
-    -- the three of them a fixed distance apart on screen whatever each is scaled to.
+    -- them a fixed distance apart on screen whatever each is scaled to.
     button:SetPoint( "RIGHT", container, "RIGHT", definition.x / definition.scale, 0 )
 
     button:SetScript( "OnClick", function()
@@ -154,6 +186,8 @@ function M.round_robin_row( parent )
 
     container.on_up = row.on_up
     container.on_down = row.on_down
+    container.on_top = row.on_top
+    container.on_bottom = row.on_bottom
     container.on_remove = row.on_remove
     container.on_toggle_core = row.on_toggle_core
 
@@ -161,6 +195,8 @@ function M.round_robin_row( parent )
     -- nothing when clicked is worse than one that says it will not.
     if row.can_move_up then buttons.up:Enable() else buttons.up:Disable() end
     if row.can_move_down then buttons.down:Enable() else buttons.down:Disable() end
+    if row.can_move_up then buttons.top:Enable() else buttons.top:Disable() end
+    if row.can_move_down then buttons.bottom:Enable() else buttons.bottom:Disable() end
 
     -- Rows are recycled between refreshes and a hidden frame never gets its OnLeave, so a stale
     -- highlight would follow the frame to its next row.

@@ -3,6 +3,8 @@ local ar = RollForAutoRobin
 
 if ar.AutoRoundRobinQueuesTab then return end
 
+local getn = RollFor.getn
+
 local M = {}
 
 -- The round-robin queues as the queue tabs of this addon's options page show them: two queues a
@@ -79,6 +81,17 @@ function M.new( round_robin, add_player )
       end
     end
 
+    -- Top and bottom are bounded the same way: the first and last player on screen, so a hidden
+    -- player above the first row keeps their place ahead of whoever is sent to the top.
+    ---@param i number
+    ---@param j number -- the row to take the place of
+    ---@return fun()
+    local function move_to_row( i, j )
+      return function()
+        round_robin.move_player_to( category, visible[ i ].position, visible[ j ].position )
+      end
+    end
+
     local listed = M.search( visible, search )
 
     for i, row in ipairs( listed ) do
@@ -91,6 +104,8 @@ function M.new( round_robin, add_player )
         -- the list it just produced.
         on_up = not searching and swap_with_neighbour( i, -1 ) or nil,
         on_down = not searching and swap_with_neighbour( i, 1 ) or nil,
+        on_top = not searching and move_to_row( i, 1 ) or nil,
+        on_bottom = not searching and move_to_row( i, getn( visible ) ) or nil,
         on_remove = function() round_robin.remove_player( category, row.position ) end,
         on_toggle_core = function( core ) round_robin.set_core( category, row.position, core ) end
       } )

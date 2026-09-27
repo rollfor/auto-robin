@@ -170,7 +170,7 @@ local function new_tab( names )
   tab.search = function( text ) search = text end
 
   ---@param position number
-  ---@param action "up"|"down"|"remove"
+  ---@param action "up"|"down"|"top"|"bottom"|"remove"
   tab.click_row = function( position, action )
     draw()
 
@@ -285,6 +285,22 @@ function RoundRobinQueuesTabEditingSpec:should_move_a_player_down()
   tab.click_row( 1, "down" )
 
   eq( tab.queue_names(), { "Bob", "Ann", "Cid" } )
+end
+
+function RoundRobinQueuesTabEditingSpec:should_move_a_player_to_the_top()
+  local tab = new_tab( { "Ann", "Bob", "Cid", "Dan" } )
+
+  tab.click_row( 3, "top" )
+
+  eq( tab.queue_names(), { "Cid", "Ann", "Bob", "Dan" } )
+end
+
+function RoundRobinQueuesTabEditingSpec:should_move_a_player_to_the_bottom()
+  local tab = new_tab( { "Ann", "Bob", "Cid", "Dan" } )
+
+  tab.click_row( 2, "bottom" )
+
+  eq( tab.queue_names(), { "Ann", "Cid", "Dan", "Bob" } )
 end
 
 function RoundRobinQueuesTabEditingSpec:should_remove_a_player()
@@ -459,6 +475,31 @@ function RoundRobinQueuesTabAbsenceSpec:should_move_a_player_past_the_hidden_one
     line( "Cid", { first = true } ),
     line( "Ann", { last = true } )
   } ) )
+end
+
+-- Top means above the first row on screen, not above the head of the queue: the hidden player
+-- ahead of everybody keeps their place, the same way the arrows step past only who is drawn.
+function RoundRobinQueuesTabAbsenceSpec:should_move_a_player_to_the_top_of_the_rows_on_screen()
+  local tab = new_tab( { "Ann", "Cid", "Dan" } )
+
+  -- Bob (hidden), Ann, Cid, Dan
+  tab.round_robin.add_player( "Marks", "Bob", "Warrior" )
+  tab.round_robin.move_player_to( "Marks", 4, 1 )
+
+  tab.click_row( 3, "top" )
+
+  eq( tab.queue_names(), { "Bob", "Dan", "Ann", "Cid" } )
+end
+
+function RoundRobinQueuesTabAbsenceSpec:should_move_a_player_to_the_bottom_of_the_rows_on_screen()
+  local tab = new_tab( { "Ann", "Cid", "Dan" } )
+
+  -- Ann, Cid, Dan, Bob (hidden)
+  tab.round_robin.add_player( "Marks", "Bob", "Warrior" )
+
+  tab.click_row( 1, "bottom" )
+
+  eq( tab.queue_names(), { "Cid", "Dan", "Ann", "Bob" } )
 end
 
 -- Up and Down rotate what is on screen, for the same reason the arrows move a player past their

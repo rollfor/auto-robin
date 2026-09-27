@@ -68,6 +68,7 @@ local round_robin_db = ar.AutoRoundRobinDb
 ---@field remove_player fun( category: string, position: number )
 ---@field set_core fun( category: string, position: number, core: boolean )
 ---@field move_player fun( category: string, position: number, offset: number )
+---@field move_player_to fun( category: string, position: number, target: number )
 ---@field cycle fun( category: string, offset: number )
 ---@field is_category_active fun( category: string ): boolean
 ---@field is_pristine fun(): boolean
@@ -536,6 +537,19 @@ function M.new( api, db, config, chat, group_roster, master_loot_candidates, loo
     queues.update( category, function( q ) M.move( q, position, offset ) end )
   end
 
+  -- Takes one player out and puts them back at target, everybody between the two shifting a place
+  -- to make room: a rotation of just that stretch, which is what cycle already is.
+  ---@param category string
+  ---@param position number
+  ---@param target number
+  local function move_player_to( category, position, target )
+    if target == position then return end
+
+    queues.update( category, function( q )
+      if target < position then M.cycle( q, -1, target, position ) else M.cycle( q, 1, position, target ) end
+    end )
+  end
+
   -- Bounded by the first and last player on screen rather than by the queue, for the reason
   -- M.cycle documents: a queue outlives the raid it was built in, so it is normally carrying
   -- players who aren't in the group, and rotating past one of those would redraw identically.
@@ -636,6 +650,7 @@ function M.new( api, db, config, chat, group_roster, master_loot_candidates, loo
     remove_player = remove_player,
     set_core = set_core,
     move_player = move_player,
+    move_player_to = move_player_to,
     cycle = cycle,
     is_category_active = is_category_active,
     is_pristine = is_pristine,

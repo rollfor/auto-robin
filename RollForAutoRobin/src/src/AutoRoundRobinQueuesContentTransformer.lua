@@ -43,6 +43,8 @@ M.button_definitions = {
 ---@class RoundRobinQueuesRow : AutoRoundRobinRow
 ---@field on_up fun()?
 ---@field on_down fun()?
+---@field on_top fun()?
+---@field on_bottom fun()?
 ---@field on_remove fun()
 ---@field on_toggle_core fun( core: boolean )
 
@@ -124,6 +126,8 @@ local function add_rows( content, rows, searching )
       can_move_down = not searching and i < count,
       on_up = row.on_up,
       on_down = row.on_down,
+      on_top = row.on_top,
+      on_bottom = row.on_bottom,
       on_remove = row.on_remove,
       on_toggle_core = row.on_toggle_core,
       padding = row_gap
